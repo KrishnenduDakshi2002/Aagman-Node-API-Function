@@ -8,6 +8,7 @@ import {
   SERVER_ERROR,
   BAD_REQUEST,
   CREATED,
+  UNAUTHORIZED,
 } from "../helpers/messageTypes";
 
 // model
@@ -20,6 +21,8 @@ export async function verifyToken(req:Request,res: Response) {
   try {
       if (req.body.UserId !== undefined){
         messageCustom(res,OK,"verified",{"status":"Authorized"});
+      }else {
+        messageCustom(res,UNAUTHORIZED,"unauthorized",{"status":"unauthorized"})
       }
   } catch (error) {
     messageError(res,SERVER_ERROR,"server error",error);
