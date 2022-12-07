@@ -1,7 +1,7 @@
 import { Response, Request } from "express";
 import mongoose from "mongoose";
 
-import Fuse from "fuse.js";
+import HandleFuzzySearch from './fuzzySearch';
 
 import { messageCustom, messageError } from "../helpers/message";
 import {
@@ -12,10 +12,7 @@ import {
 } from "../helpers/messageTypes";
 
 //models
-import {
-  DiscussionModel,
-  AnswerModel,
-} from "../models/discussion.model";
+import { DiscussionModel, AnswerModel } from "../models/discussion.model";
 import User from "../models/user.model";
 
 export async function getAllQuestions(req: Request, res: Response) {
@@ -39,11 +36,12 @@ export async function getQuestion(req: Request, res: Response) {
     const question = await DiscussionModel.findById(id).populate([
       { path: "author", select: "userName" },
       {
-        path:"answers",
-        populate:{
-          path: "author",select:"userName"
-        }
-      }
+        path: "answers",
+        populate: {
+          path: "author",
+          select: "userName",
+        },
+      },
     ]);
     messageCustom(res, OK, "OK", question);
   } catch (error) {
@@ -56,7 +54,11 @@ export async function postAnswer(req: Request, res: Response) {
     const { UserId, questionId, ...body } = req.body;
     const _id = new mongoose.Types.ObjectId(UserId);
     const Question_id = new mongoose.Types.ObjectId(questionId);
-    const answer = await new AnswerModel({ ...body,likes:0, author: _id }).save();
+    const answer = await new AnswerModel({
+      ...body,
+      likes: 0,
+      author: _id,
+    }).save();
     await DiscussionModel.findByIdAndUpdate(Question_id, {
       $addToSet: { answers: answer._id },
     });
@@ -71,7 +73,7 @@ export async function getAllAnswers(req: Request, res: Response) {
   try {
     const page = +(req.query.page as string) - 1;
     const limit = +(req.query.limit as string);
-    const { questionId} = req.body;
+    const { questionId } = req.body;
     const Question_id = new mongoose.Types.ObjectId(questionId);
     const answers = await DiscussionModel.findById(Question_id)
       .sort({ createdAt: -1 })
@@ -84,18 +86,18 @@ export async function getAllAnswers(req: Request, res: Response) {
     messageError(res, SERVER_ERROR, "server error", error);
   }
 }
-
 export async function fuzzySearch(req: Request, res: Response) {
   try {
+    const PAGE = +(req.query.page as string) - 1;
+    const LIMIT = +(req.query.limit as string);
+    const QUERY = req.query.query as string;
+    const factor = PAGE * LIMIT;
     const questions = await DiscussionModel.find({});
-    const options = {
-      includeScore: true,
-      keys: ["question", "tags"],
-    };
-    const fuse = new Fuse(questions, options);
-    const { searchText } = req.body;
-    const result = fuse.search(searchText);
-    messageCustom(res, OK, "OK", result);
+    // getting all searched results
+    // then filtering using slice
+    const results = HandleFuzzySearch(QUERY,questions,["question","tags"]);
+    const finalResult = results.slice(factor,factor + LIMIT);
+    messageCustom(res, OK, "OK", {founded: results.length,results: finalResult});
   } catch (error) {
     messageError(res, SERVER_ERROR, "server error", error);
   }
@@ -192,9 +194,9 @@ export async function updateLike(req: Request, res: Response) {
 
 export async function dataEntry(req: Request, res: Response) {
   try {
-    const answers = await AnswerModel.find({}).updateMany({likes: 55});
-    messageCustom(res, OK, "updated",{ans : answers});
+    const answers = await AnswerModel.find({}).updateMany({ likes: 55 });
+    messageCustom(res, OK, "updated", { ans: answers });
   } catch (error: any) {
-    messageError(res,SERVER_ERROR,"server error",error)
+    messageError(res, SERVER_ERROR, "server error", error);
   }
 }

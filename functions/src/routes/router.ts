@@ -5,11 +5,17 @@ import { createEvent, deleteEvent, getAllEvents } from '../controllers/event.con
 import { login, signUp, verifyToken } from '../controllers/user.controller';
 import SanitizerMiddleware from '../middlewares/sanitizer.middleware';
 import UserAuthentication from '../middlewares/verifyToken.middleware';
+import User from '../models/user.model';
 
 const router = Router();
 
 router.get('/',(req:Request,res:Response)=>{
-    res.json('Welcome to Aagman Backend')
+    res.json('Hi!! Welcome to Aagman Backend')
+})
+
+router.delete('/delete',async(req,res)=>{
+    const response = await User.deleteMany({userName : 'kdakshi'});
+    res.json(response);
 })
 
 //user routes
@@ -25,7 +31,7 @@ router.delete('/api/v1/event/delete',[UserAuthentication],deleteEvent);
 router.post('/api/v1/discussion/question/post',[UserAuthentication],createQuestion);
 router.get('/api/v1/discussion/question/getAll',getAllQuestions);
 router.get('/api/v1/discussion/question',getQuestion);
-router.post('/api/v1/discussion/question/search',[SanitizerMiddleware],fuzzySearch);
+router.get('/api/v1/discussion/question/search',[SanitizerMiddleware],fuzzySearch);
 router.patch('/api/v1/discussion/question/update',[UserAuthentication],updateQuestion);
 router.patch('/api/v1/discussion/question/update/likes',[UserAuthentication],updateLike);
 router.delete('/api/v1/discussion/question/delete',[UserAuthentication],deleteQuestion);
